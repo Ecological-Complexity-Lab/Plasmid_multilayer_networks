@@ -1,0 +1,190 @@
+####################################################################################################################
+# Plasmid rumen network analysis
+# 
+# Script 15: Run Gillespie model for the central plasmids, using HPC at BGU
+# 
+# 
+# Script tested for R version 4.1.1
+####################################################################################################################
+
+# Path for libraries (BGU HPC)
+#! /gpfs0/shai/projects/R4/R-4.0.3/bin/Rscript
+.libPaths("/gpfs0/shai/projects/R4/R-4.0.3/lib64/R/library")
+print(.libPaths())
+print(sessionInfo())
+
+library(tidyverse)
+
+# Matrix, created in 13_Gillespie_model_setup.R
+load("mat.Rda")
+
+# Matrix id's, created in 13_Gillespie_model_setup.R
+load("mat.ids.Rda")
+
+# Plasmids to run model on, created in 14_Pick_starting_plasmids.R
+load("mod1.sampled.Rda")
+load("bool.centr.obs.Rda")
+
+# Gillespie function: 
+gillespie <- function(boolean, # Your state nodes with or without gene
+                      sim.matrix, # Matrix defining the flow
+                      pars, # Parameters of the model
+                      time_v){ #And a vector of times when things happen
+  # Rates
+  p <- pars$success_probability # For gene transfer
+  cont <- pars$contact_rate # Rate at which plasmids contact (NOTE that I see this as a total rate, not a per capita one)
+  loss <- pars$loss_rate # Gene loss per capita rate (NOTE that this changes when we gain or loose genes)
+  
+  # States: note that the state of the system is encoded in the boolean but it
+  # will be handy to track the number of genes in the (meta)population.
+  G <- sum(boolean)
+  
+  n_plasmids <- length(boolean) # Needed for later
+  
+  # Propensities
+  r1 <- function(){cont}  # Two plasmids collide
+  r2 <- function(){loss * G} # Losing a gene
+  
+  # Vector of propensities
+  rates <- c(r1(), r2())
+  
+  # Names of events
+  events <- c("f1", "f2")
+  # Events: each one actualizes the corresponding states and propensities.
+  f1 <- function(){ #Two plasmids collide
+    x1 <- sample.int(n_plasmids, 1)
+    x2 <- sample.int(n_plasmids, 1)
+    
+    if(boolean[x1] != boolean[x2]){
+      gain <- runif(1) < (p * sim.matrix[x1, x2])
+      if (gain) boolean[x1] <<- T; boolean[x2] <<- T; G <<- G + 1; rates[2] <<- r2() 
+    }
+  }
+  f2 <- function(){ #A gene is loss at random
+    index <- which(boolean)
+    lost <- sample.int(G, 1)
+    boolean[index[lost]] <<- F
+    G <<- G - 1
+    rates[2] <<- r2()
+    rm(index); rm(lost)
+  }
+  
+  
+  # Initialize variables
+  t <- time_v[1]
+  out <- matrix(nrow = n_plasmids, ncol = length(time_v))
+  out[, 1] <- boolean
+  
+  # Note: a little fraction of time is out of sync. Correct when everything else is settled.
+  # Size of error depends on contact rate (higher contact rate = lower error)
+  
+  # Start simulations
+  for(i in 2:length(time_v)){
+    while (t < time_v[i]){
+      
+      # Sampling
+      dt <- stats::rexp(1, sum(rates))
+      
+      z <- sample.int(length(rates), 1, prob = rates)
+      do.call(events[z], args = list())
+      
+      t <- t + dt
+    }
+    out[, i] <- boolean #saving the states
+  }
+  
+  out
+}
+
+
+# Gillespie for-loop
+
+# Set up the parameters
+# Success rate:
+success <- 1
+
+# Contact rates between plasmids:
+cr.list <- c(10, 100, 1000)
+
+# Loss rate of gene:
+lr.list <- c(0, 0.01, 0.1)
+
+# Number of repetitions
+reps.ls <- c(seq(1, 300, 1))
+
+# Parameters:
+pars.df <- expand.grid(success, cr.list, lr.list)
+
+# Set column names of the parameters dataframe
+colnames(pars.df) <- c("success_probability", "contact_rate", "loss_rate") 
+
+# Combine the parameters together in a single dataframe 
+pars.reps.df <- expand.grid(success, cr.list, lr.list,reps.ls, names(bool.centr.obs)) %>%
+  rownames_to_column(., var="df.id")
+
+# Set column names of the parameters dataframe
+colnames(pars.reps.df) <- c("df.id","success_probability", "contact_rate", "loss_rate", "sim.rep", "plasmid.rep") 
+
+ResultList.high<-list()
+
+# Loop over variants and populate ResultList
+for(i in 1:length(bool.centr.obs)){
+  for(j in 1:length(reps.ls))
+  {
+    for(k in 1:nrow(pars.df))
+    {
+      boolean <- bool.centr.obs[[i]]
+      temp <- as.data.frame(gillespie(boolean = boolean, 
+                                      sim.matrix = mat, 
+                                      pars = list(success_probability = pars.df[k,1], contact_rate = pars.df[k,2], loss_rate = pars.df[k,3]), 
+                                      time_v = 0:1000)) 
+      
+      resList<-(temp)
+      
+      # Append results to the model list
+      ResultList.high[[length(ResultList.high)+1]]<-resList
+    }
+  }
+}
+
+step1.hi <- lapply(ResultList.high, function(x) as.data.frame(x) %>%
+                     rownames_to_column(., var="mat.order") %>%
+                     mutate(mat.order = as.double(mat.order)) %>%
+                     left_join(., mat.ids) %>%
+                     select(-mat.order) %>%
+                     select(layer_id, everything()) %>%
+                     group_by(layer_id) %>% 
+                     summarise(across(starts_with("V"), sum)) %>%
+                     column_to_rownames(., var="layer_id") %>%
+                     mutate_at(vars(starts_with("V")), ~as.logical(.)))
+
+
+step2.hi <- lapply(step1.hi, function(x) as.data.frame(colSums(x)) %>%
+                     mutate(time.step = 1:length(x)) %>%
+                     dplyr::rename(with.gene=`colSums(x)`))
+
+# Name each list
+names(step2.hi) <- c(1:length(step2.hi))
+
+# Match each list to the parameters of the list, in pars.reps.df
+# Each row with a set of parameters is assigned a df.id
+pars.reps.df
+
+# Create a new variable in each dataframe with a df.id, corresponding to the dataframe number in the list
+step3.hi <- map2(step2.hi, names(step2.hi), ~ mutate(.x, df.id = .y))
+
+# Join the list of dataframes into one dataframe and then join by the df.id column in the 
+# parameters dataframe in order to join the parameters to the results of each simulation
+sim.df.high <- do.call(rbind.data.frame, step3.hi) %>%
+  left_join(., pars.reps.df, by="df.id") %>%
+  select(-df.id) %>%
+  mutate(contact_loss = paste(contact_rate,loss_rate, sep = "_"))
+
+# Mean cows infected per time-step across simulations
+sim.df.high.mean <- sim.df.high %>%
+  group_by(time.step, contact_loss, loss_rate, contact_loss, groups=T) %>%
+  summarise(mean.gene=mean(with.gene))
+
+# Save the outputs
+save(step2.hi, file = "step2.hi.Rda")
+save(step3.hi, file = "step3.hi.Rda")
