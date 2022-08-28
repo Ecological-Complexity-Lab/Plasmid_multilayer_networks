@@ -31,6 +31,7 @@ sim.df.low.mean <- sim.df.low %>%
   group_by(time.step, contact_loss, loss_rate, contact_loss, groups=T) %>%
   summarise(mean.gene=mean(with.gene))
 
+# Save outputs
 save(sim.df.low, file="sim.df.low.Rda")
 
 save(sim.df.low.mean, file="sim.df.low.mean.Rda")
