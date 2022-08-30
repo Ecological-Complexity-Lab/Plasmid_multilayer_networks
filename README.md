@@ -9,4 +9,4 @@ Scripts can be started independently using the Rdata saved in the `Rdata_Interme
 
 Each script is sub-divided to sections. All the scripts are fully commented.
 
-All scripts can be run on a local computer, besides the transmission model (scripts 15-18).
+All scripts can be run on a local computer, besides the transmission model (scripts 15-18), which requires use of HPC and was run on the Ben-Gurion University server.
