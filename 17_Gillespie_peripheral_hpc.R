@@ -4,7 +4,7 @@
 # Script 17: Run Gillespie model for the peripheral plasmids, using HPC at BGU
 # 
 # 
-# Script tested for R version 4.1.1
+# Script tested for R version 4.1.1,  run on the BGU HPC
 ####################################################################################################################
 
 #! /gpfs0/shai/projects/R4/R-4.0.3/bin/Rscript
@@ -12,8 +12,10 @@
 print(.libPaths())
 print(sessionInfo())
 
+# Load the necessary libraries
 library(tidyverse)
 
+# Load the data needed to run the script (upload to folder in which you are running this script on the HPC)
 # Matrix, created in 13_Gillespie_model_setup.R
 load("mat.Rda")
 
@@ -24,7 +26,7 @@ load("mat.ids.Rda")
 load("not.mod1.sampled.Rda")
 load("bool.periph.obs.Rda")
 
-# Gillespie function: 
+# Create the Gillespie function: 
 gillespie <- function(boolean, # Your state nodes with or without gene
                       sim.matrix, # Matrix defining the flow
                       pars, # Parameters of the model
@@ -96,7 +98,9 @@ gillespie <- function(boolean, # Your state nodes with or without gene
 }
 
 
-# Gillespie for-loop
+# Create a for-loop to run the above Gillespie function for each starting plasmid and each parameter
+
+# Set up the parameters
 
 
 # Set up the parameters
@@ -112,7 +116,7 @@ lr.list <- c(0, 0.01, 0.1)
 # Number of repetitions
 reps.ls <- c(seq(1, 300, 1))
 
-# Parameters:
+# Create a dataframe of the combination of each parameters:
 pars.df <- expand.grid(success, cr.list, lr.list)
 
 # Set column names of the parameters dataframe
@@ -125,15 +129,20 @@ pars.reps.df <- expand.grid(success, cr.list, lr.list,reps.ls, names(bool.periph
 # Set column names of the parameters dataframe
 colnames(pars.reps.df) <- c("df.id","success_probability", "contact_rate", "loss_rate", "sim.rep", "plasmid.rep") 
 
+
+# Actual for-loop for running the model on each starting plasmid with each parameter combination
+# Create an empty list where you will store the results:
 ResultList.low<-list()
 
-# Loop over variants and populate ResultList
+# Loop over each starting plasmid, parameter combination, and iteration of the simulation (300) 
+# Results of each iteration of the loop will populate ResultList
 for(i in 1:length(bool.periph.obs)){
   for(j in 1:length(reps.ls))
   {
     for(k in 1:nrow(pars.df))
     {
       boolean <- bool.periph.obs[[i]]
+      # Run the Gillespie model with given parameters for 1000 time-steps, save result as a dataframe
       temp <- as.data.frame(gillespie(boolean = boolean, 
                                       sim.matrix = mat, 
                                       pars = list(success_probability = pars.df[k,1], contact_rate = pars.df[k,2], loss_rate = pars.df[k,3]), 
@@ -147,8 +156,10 @@ for(i in 1:length(bool.periph.obs)){
   }
 }
 
+# Save the Result list
 save(ResultList.low, file= "ResultList.low.Rda")
 
+# Some organizing / housekeeping of the results for each iteration of the model
 step1 <- lapply(ResultList.low, function(x) as.data.frame(x) %>%
                   rownames_to_column(., var="mat.order") %>%
                   mutate(mat.order = as.double(mat.order)) %>%
@@ -160,6 +171,7 @@ step1 <- lapply(ResultList.low, function(x) as.data.frame(x) %>%
                   column_to_rownames(., var="layer_id") %>%
                   mutate_at(vars(starts_with("V")), ~as.logical(.)))
 
+# Sum the number of COWS with the gene in each time step
 step2 <- lapply(step1, function(x) as.data.frame(colSums(x)) %>%
                   mutate(time.step = 1:length(x)) %>%
                   dplyr::rename(with.gene=`colSums(x)`))

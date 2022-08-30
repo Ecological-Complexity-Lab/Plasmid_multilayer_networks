@@ -4,7 +4,7 @@
 # Script 16: Run statistics on output of Gillespie dynamical model on central plasmids (using BGU HPC)
 # 
 # 
-# Script tested for R version 4.1.1
+# Script tested for R version 4.1.1, run on the BGU HPC
 ####################################################################################################################
 
 #! /gpfs0/shai/projects/R4/R-4.0.3/bin/Rscript
@@ -12,9 +12,11 @@
 print(.libPaths())
 print(sessionInfo())
 
+# Load the necessary libraries
 library(tidyverse)
 
-# Outputs from script 15
+# Load the data needed to run the script (upload to folder in which you are running this script on the HPC)
+# Outputs from script 15_Gillespie_central_hpc.R
 load("step3.hi.Rda")
 load("pars.reps.df.Rda")
 
@@ -26,7 +28,7 @@ sim.df.hi <- do.call(rbind.data.frame, step3.hi) %>%
   select(-df.id) %>%
   mutate(contact_loss = paste(contact_rate,loss_rate, sep = "_"))
 
-# Mean cows infected per time-step across simulations
+# Calculate the mean number of cows infected per time-step across simulations
 sim.df.hi.mean <- sim.df.hi %>%
   group_by(time.step, contact_loss, loss_rate, contact_loss, groups=T) %>%
   summarise(mean.gene=mean(with.gene))

@@ -38,7 +38,7 @@ load("st.node.list.ord.Rda")
 # Section 1: RANDOMLY PICK CENTRAL PLASMIDS (BELONGING TO MODULE 1)
 ####################################################################################################################
 
-# Identify module 1 cows
+# Identify state nodes in module 1 (the biggest module)
 mod1 <- plas_mods.df %>%
   distinct() %>%
   filter(module==1) %>%
@@ -48,7 +48,7 @@ mod1 <- plas_mods.df %>%
   left_join(., plas_mods.stats) %>%
   left_join(., st.node.list.ord)
 
-# Randomly sample
+# Randomly sample state nodes in module 1
 mod1.sampled <- mod1 %>%
   select(st.node.id, node_id) %>%
   #distinct(node_id) %>%
@@ -71,8 +71,11 @@ save(mod1.sampled, file="mod1.sampled.Rda")
 ####################################################################################################################
 # Section 2: CREATE STARTING BOOLEAN LIST FOR CENTRAL PLASMIDS
 ####################################################################################################################
+# Create an empty list
 bool.centr.obs <- list()
 
+# Create a boolean list for each starting plasmid, with the position of the starting plasmid TRUE and all other
+# positions FALSE
 for(i in 1:nrow(mod1.sampled)) {
   bt <- c(rep(FALSE, each=mod1.sampled$pre[i]), rep(TRUE,1), rep(FALSE,each=mod1.sampled$post[i]))
   
@@ -80,8 +83,10 @@ for(i in 1:nrow(mod1.sampled)) {
   
 }
 
+# Assign name of each list as the starting plasmid
 names(bool.centr.obs) <- c(paste("centr",mod1.sampled$st.node.id, sep = "_"))
 
+# Save the data
 save(bool.centr.obs, file="bool.centr.obs.Rda")
 ####################################################################################################################
 
@@ -90,6 +95,7 @@ save(bool.centr.obs, file="bool.centr.obs.Rda")
 # Section 3: RANDOMLY PICK PERIPHERAL PLASMIDS (BELONGING TO SMALLEST MODULES)
 ####################################################################################################################
 
+# Identify state nodes in the smallest modules (those with 2 state nodes)
 not.mod1 <- plas_mods.df %>%
   distinct() %>%
   left_join(., deg.str.2k.all.phys, by="node_id") %>%
@@ -99,6 +105,7 @@ not.mod1 <- plas_mods.df %>%
   left_join(., st.node.list.ord) %>%
   filter(n.state.nodes==2)
 
+# Join module and plasmid metadata to state nodes that are not in the biggest module (module 1)
 not.mod1.cows <- plas_mods.df %>%
   distinct() %>%
   filter(module!=1) %>%
@@ -114,7 +121,7 @@ not.mod1.cows <- plas_mods.df %>%
   filter(., !(layer_id %in% mod1$layer_id))
   #filter(layer_id !(%in% mod1$layer_id))
 
-# Randomly sample
+# Randomly sample the state nodes in the smallest modules
 not.mod1.sampled <- not.mod1 %>%
   select(st.node.id, node_id) %>%
   #distinct(node_id) %>%
@@ -128,7 +135,7 @@ not.mod1.sampled <- not.mod1 %>%
          post = 1514 - mat.order) %>%
   arrange(mat.order)
 
-# Save
+# Save the data
 save(not.mod1.sampled, file="not.mod1.sampled.Rda")
 ####################################################################################################################
 
@@ -136,9 +143,12 @@ save(not.mod1.sampled, file="not.mod1.sampled.Rda")
 ####################################################################################################################
 # Section 4: CREATE STARTING BOOLEAN LIST FOR PERIPHERAL PLASMIDS
 ####################################################################################################################
-
+# Repeat the process from Section 2 on the peripheral plasmids
+# Create an empty list
 bool.periph.obs <- list()
 
+# Create a boolean list for each starting plasmid, with the position of the starting plasmid TRUE and all other
+# positions FALSE
 for(i in 1:nrow(not.mod1.sampled)) {
   bt <- c(rep(FALSE, each=not.mod1.sampled$pre[i]), rep(TRUE,1), rep(FALSE,each=not.mod1.sampled$post[i]))
   
@@ -146,7 +156,8 @@ for(i in 1:nrow(not.mod1.sampled)) {
   
 }
 
+# Assign name of each list as the starting plasmid
 names(bool.periph.obs) <- c(paste("periph",not.mod1.sampled$st.node.id, sep = "_"))
 
-# Save
+# Save the data 
 save(bool.periph.obs, file="bool.periph.obs.Rda")

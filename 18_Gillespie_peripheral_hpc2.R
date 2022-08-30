@@ -4,7 +4,7 @@
 # Script 18: Run statistics on output of Gillespie dynamical model on peripheral plasmids (using BGU HPC)
 # 
 # 
-# Script tested for R version 4.1.1
+# Script tested for R version 4.1.1, run on the BGU HPC
 ####################################################################################################################
 
 #! /gpfs0/shai/projects/R4/R-4.0.3/bin/Rscript
@@ -12,9 +12,11 @@
 print(.libPaths())
 print(sessionInfo())
 
+# Load the necessary libraries
 library(tidyverse)
 
-# Outputs from script 17
+# Load the data needed to run the script (upload to folder in which you are running this script on the HPC)
+# Outputs from script 17_Gillespie_peripheral_hpc.R
 load("step3.Rda")
 load("pars.reps.df.Rda")
 

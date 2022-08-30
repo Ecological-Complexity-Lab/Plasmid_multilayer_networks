@@ -108,9 +108,9 @@ gillespie <- function(boolean, # Your state nodes with or without gene
 
 
 ####################################################################################################################
-# Section 2: CREATE A MATRIX FROM THE EDGELIST FOR THE GILLESPIE MODEL
+# Section 2: CREATE A MATRIX FROM THE EXTENDED EDGELIST FOR THE GILLESPIE MODEL
 ####################################################################################################################
-
+# Create state-node labels (layer-plasmid names combination)
 pre.mat1 <- net.dat2k.ew %>%
   rowwise() %>%
   mutate(fr_node = paste("N",node_from,sep = "")) %>%
@@ -120,10 +120,12 @@ pre.mat1 <- net.dat2k.ew %>%
   mutate(to_lay = paste("L",layer_to,sep = "")) %>%
   mutate(to_grp = paste(to_node, to_lay,  sep = "_"))
 
+# Select relevant columns for creating the matrix 
 pre.mat2 <- pre.mat1 %>%
   ungroup() %>%
   select(fr_grp, to_grp, weight)
 
+# Rename columns
 pre.st.fr <- pre.mat1 %>%
   ungroup() %>%
   select(layer_from, node_from, fr_grp) %>%
@@ -132,14 +134,16 @@ pre.st.fr <- pre.mat1 %>%
          node_id=node_from,
          st.node.id=fr_grp)
 
+# Create a graph from the dataframe
 graph1 <- graph_from_data_frame(pre.mat2, directed=F)
 
+# Create an adjacency matrix from the graph
 mat <- get.adjacency(graph1, sparse = FALSE, attr='weight', type="both")
 
 # Save the matrix:
 save(mat, file="mat.Rda")
 
-# Bind ordered node list to state node characteristics
+# Create a list of state nodes and bind them to their metadata (characteristics of plasmids and their modules)
 st.node.list <- pre.mat1 %>%
   ungroup() %>%
   select(layer_to, node_to, to_grp) %>%
@@ -153,13 +157,15 @@ st.node.list <- pre.mat1 %>%
   left_join(., plas_mods.df) %>%
   left_join(., plas_mods.stats)
 
+# Create variable for the matrix order of each state node
 st.node.order <- as.data.frame(mat) %>%
   rownames_to_column(., var="st.node.id") %>%
   select(st.node.id) %>%
-  # Give a rank 
+  # Give a position variable 
   rownames_to_column(., var="mat.order") %>%
   mutate(mat.order=as.numeric(mat.order))
 
+# Bind metadata to the ordered state node list with matrix order variable
 st.node.list.ord <- st.node.list %>%
   left_join(., st.node.order) %>%
   mutate(layer_id=as.factor(layer_id)) %>%
@@ -169,6 +175,8 @@ st.node.list.ord <- st.node.list %>%
 # Save the data
 save(st.node.list.ord, file="st.node.list.ord.Rda")
 
+# Create a list of the matrix order variable and cow layer, e.g. identify 
+# which cow each matrix position corresponds to
 mat.ids <- st.node.list.ord %>%
   select(mat.order, layer_id)
 

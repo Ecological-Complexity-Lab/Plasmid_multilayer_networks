@@ -18,12 +18,12 @@ library(tidyverse)
 library(ggplot2)
 library(viridis)
 
-# Load data processed on the server: 
-# Central plasmids
+# Load data created on the server: 
+# Central plasmids (created in script 16_Gillespie_central_hpc2.R)
 load("sim.df.hi.Rda")
 load("sim.df.hi.mean.Rda")
 
-# Peripheral plasmids:
+# Peripheral plasmids (created in script 18_Gillespie_peripheral_hpc2.R)
 load("sim.df.low.Rda")
 load("sim.df.low.mean.Rda")
 
@@ -100,12 +100,7 @@ last.step.high <- sim.df.hi %>%
 #slice_head()
 #summarise(min.time.step=min(time.step))  
 
-last.step.high.test <- sim.df.hi %>%
-  filter(with.gene == 21 & contact_loss=="100_0") %>%
-  ungroup() %>%
-  group_by(sim.rep, plasmid.rep, .groups=T) %>%
-  slice_min(time.step)
-
+# Percent of simulations in which all 21 cows infected with gene, per parameter combination
 last.step.high2 <- last.step.high %>%
   group_by(contact_loss) %>%
   mutate(mean.time.step = mean(time.step),
@@ -114,6 +109,7 @@ last.step.high2 <- last.step.high %>%
   select(contact_loss, mean.time.step, per.reps.21) %>%
   distinct()
 
+# Time-step at which gene reaches all 21 cow, per simulation, starting plasmid, and parameter combination
 last.step.high <- sim.df.hi %>%
   filter(with.gene == 21) %>%
   ungroup() %>%
@@ -124,6 +120,7 @@ last.step.high <- sim.df.hi %>%
 
 
 # Repeat for peripheral plasmids
+# Time to getting to all 21, central plasmids
 last.step.low <- sim.df.low %>%
   filter(with.gene == 21) %>%
   ungroup() %>%
@@ -136,6 +133,7 @@ last.step.low.not21 <- sim.df.low %>%
   group_by(sim.rep, plasmid.rep,contact_loss, .groups=T) %>%
   slice_max(time.step)
 
+# Percent of simulations in which all 21 cows infected with gene, per parameter combination
 last.step.low2 <- last.step.low %>%
   group_by(contact_loss) %>%
   mutate(mean.time.step = mean(time.step),
@@ -144,7 +142,7 @@ last.step.low2 <- last.step.low %>%
   select(contact_loss, mean.time.step, per.reps.21) %>%
   distinct()
 
-# Mean for last step
+# Mean number of cows with gene at the last step
 last.step.low3 <- sim.df.low %>%
   filter(time.step == 300) %>%
   group_by(contact_loss) %>%
@@ -152,6 +150,7 @@ last.step.low3 <- sim.df.low %>%
   select(contact_loss, mean.inf.300) %>%
   distinct()
 
+# Max number of cows with gene in simulations where gene did not reach all 21 cows
 last.step.low.under21 <- sim.df.low %>%
   filter(with.gene != 21) %>%
   ungroup() %>%
