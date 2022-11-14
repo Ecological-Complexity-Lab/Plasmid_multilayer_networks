@@ -20,5 +20,5 @@ For convenience, we include a few files give direct information on the data, wit
 * `plasmid.2k.metadat.csv`: A table describing which plasmid occurs in which cow.
 * `net.dat2k.ew.csv`: A table of edge lists (the network). In an extended edge list format
 * `plas_mods.df.csv`: A table with the module assignment of each plasmid.
-
+* `ann.metadat.v1.csv`: A table with module assignments and ORF annotations.
 
