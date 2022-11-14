@@ -1,7 +1,8 @@
-# Shapiro_etal_Plasmid_Networks
-Data and scripts to carry out all analysis in Shapiro et al., "Multilayer Networks of Plasmid Genetic Similarity Reveal Potential Pathways of Gene Transmission"
+# General information about code and data
 
-All scripts tested for R version 4.1.1
+The repository contains data and scripts to carry out all analysis in Shapiro et al., "Multilayer Networks of Plasmid Genetic Similarity Reveal Potential Pathways of Gene Transmission"
+
+All scripts tested in R version 4.1.1
 
 This repository contains all files needed to run analysis on plasmid rumen networks. To begin, download and unzip the `StartingFiles.zip` folder and run analyses sequentially starting with script 01_Initial_data_processing.
 
@@ -10,3 +11,14 @@ Scripts can be started independently using the Rdata saved in the `Rdata_Interme
 Each script is sub-divided to sections. All the scripts are fully commented.
 
 All scripts can be run on a local computer, besides the transmission model (scripts 15-18), which requires use of HPC and was run on the Ben-Gurion University server.
+
+# Highlighted files
+
+For convenience, we include a few files give direct information on the data, without needing to go through the whole analysis.
+
+* `'plas.2k.name.node.id.csv`: A table with plasmid nam,es and ids
+* `plasmid.2k.metadat.csv`: A table describing which plasmid occurs in which cow.
+* `net.dat2k.ew.csv`: A table of edge lists (the network). In an extended edge list format
+* `plas_mods.df.csv`: A table with the module assignment of each plasmid.
+* `ann.metadat.v1.csv`: A table with module assignments and ORF annotations.
+
