@@ -15,9 +15,10 @@ All scripts can be run on a local computer, besides the transmission model (scri
 # Highlighted files
 
 For convenience, we include a few files give direct information on the data, without needing to go through the whole analysis.
-`'plas.2k.name.node.id.csv`: A table with plasmid nam,es and ids
-`plasmid.2k.metadat.csv`: A table describing which plasmid occurs in which cow.
-`net.dat2k.ew.csv`: A table of edge lists (the network). In an extended edge list format
-`plas_mods.df.csv`: A table with the module assignment of each plasmid.
+
+* `'plas.2k.name.node.id.csv`: A table with plasmid nam,es and ids
+* `plasmid.2k.metadat.csv`: A table describing which plasmid occurs in which cow.
+* `net.dat2k.ew.csv`: A table of edge lists (the network). In an extended edge list format
+* `plas_mods.df.csv`: A table with the module assignment of each plasmid.
 
 
