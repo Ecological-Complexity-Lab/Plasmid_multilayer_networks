@@ -139,11 +139,11 @@ layer.mod <- ggplot(plas_mods.stats, aes(x=n.layers))+
 
 
 ####################################################################################################################
-# Section 4: DATA FORMATTING FOR NETWORK VISUALIZATIONS
+# Section 4A: DATA FORMATTING FOR NETWORK VISUALIZATIONS - BIG MODULE
 ####################################################################################################################
 # Format data for visualizations:
 plas_mods.stats.lab <- plas_mods.stats %>%
-  mutate(mod.type=ifelse(module == 1, "big", "not big")) 
+  mutate(mod.type=ifelse(module == 1, "big", "not big")) # THE LARGEST MODULE IS WITH ID 1
   
 plas_mods2 <- plas_mods.df %>%
   left_join(., plas_mods.stats.lab, by="module") %>%
@@ -222,7 +222,6 @@ mod.layer.list <- big.mod.plas.list.layers %>%
   rbind(only.not.big) %>%
   mutate(layer_id = as.factor(layer_id))
 
-
 # Set up data for visualizations:
 # Labelling edges as part of the largest module or not:
 inter.for.vis2 <- plas_mods3 %>%
@@ -234,8 +233,8 @@ inter.for.vis2 <- plas_mods3 %>%
   mutate(uniq_laypair = paste(sort(c(l_fr, l_to)), collapse = "_")) %>%
   select(-l_fr, -l_to) %>%
   select(uniq_laypair, everything()) %>%
-  group_by(uniq_laypair, inter.big) %>%
-  mutate(weight = n()) %>%
+  group_by(layer_from, layer_to, uniq_laypair, inter.big) %>%
+  summarise(weight = n()) %>%
   mutate(layer_from = as.numeric(layer_from),
          layer_to = as.numeric(layer_to)) %>%
   mutate_at(vars(inter.big), ~replace_na(., "not.big")) %>%
@@ -277,7 +276,7 @@ intra.for.vis2 <- plas_mods3 %>%
 
 
 ####################################################################################################################
-# Section 5: NETWORK VISUALIZATIONS
+# Section 5A: NETWORK VISUALIZATIONS - BIG MODULE
 ####################################################################################################################
 # Visualization of the network with interlayer edges and the largest module highlighted
 graph2 <- graph_from_data_frame(inter.for.vis2, directed=F, vertices = intra.for.vis2)
@@ -294,31 +293,273 @@ V(graph2)$color <- as.factor(intra.for.vis2$mod.lab)
 E(graph2)$color <- ifelse(inter.for.vis2$inter.big == "big.to.big", "red", "gray")
 V(graph2)$color <- ifelse(intra.for.vis2$mod.lab == "big", "red", "gray")
 
+# Use the same coordinates for the big module and the ABR module (sections 4B and 5B)
+Coords <- layout_with_lgl(graph2) %>% 
+  as_tibble %>%
+  bind_cols(data_frame(names = names(V(graph2))))
+
+
 # Test plotting
-plot(graph2, edge.width=(E(graph2)$weight*0.1),vertex.label=intra.for.vis2$num.plasmids, 
-     vertex.label.font=2, vertex.label.cex=0.9,
-     vertex.label.color = "black", layout=layout_with_lgl)
+# Node labels are:  cow number (number of plasmids)
+plot(graph2, edge.width=(E(graph2)$weight*0.1),vertex.label=
+       paste(V(graph2)$name,' (',intra.for.vis2$tot.plas,')',sep=''), 
+     vertex.label.font=2, vertex.label.cex=0.7,
+     vertex.label.color = "black", layout=as.matrix(Coords[,1:2]))
 
 
 # Create Figure 2 Panel B: Full network plot with largest module highlighted:
 png(filename = "big.mod.highlight.plot.labs.png",res = 900, width = 10, height = 10, units = "in") 
 {
-  plot(graph2, edge.width=(E(graph2)$weight*0.1),vertex.label=intra.for.vis2$num.plasmids, 
-       vertex.label.font=2, vertex.label.cex=0.9 , 
-       vertex.label.color = "black",layout=layout_with_lgl)
+  plot(graph2, edge.width=(E(graph2)$weight*0.1),vertex.label=
+         paste(V(graph2)$name,' (',intra.for.vis2$tot.plas,')',sep=''), 
+       vertex.label.font=2, vertex.label.cex=0.7,
+       vertex.label.color = "black", layout=as.matrix(Coords[,1:2]))
 }
 dev.off()
 
 # Save as pdf
 pdf(file = "big.mod.highlight.plot.pdf", width = 6, height = 6) 
 {
-  plot(graph2, edge.width=(E(graph2)$weight*0.1),vertex.label=intra.for.vis2$num.plasmids, 
-       vertex.label.font=2, vertex.label.cex=0.9 , 
-       vertex.label.color = "black",layout=layout_with_lgl)
+  plot(graph2, edge.width=(E(graph2)$weight*0.1),vertex.label=
+         paste(V(graph2)$name,' (',intra.for.vis2$tot.plas,')',sep=''), 
+       vertex.label.font=2, vertex.label.cex=0.4,
+       vertex.label.color = "black", layout=as.matrix(Coords[,1:2]))
 }
 dev.off()
 ####################################################################################################################
 
+# The code in sections 4B and 5B is a copy-paste from 4A nd 5A. The only difference is the module ID and the color of the plot
+
+####################################################################################################################
+# Section 4B: DATA FORMATTING FOR NETWORK VISUALIZATIONS - ABR MODULE
+####################################################################################################################
+# Format data for visualizations:
+plas_mods.stats.lab <- plas_mods.stats %>%
+  mutate(mod.type=ifelse(module == 2, "abr", "not abr")) # The ABR module is with ID 2
+
+plas_mods2 <- plas_mods.df %>%
+  left_join(., plas_mods.stats.lab, by="module") %>%
+  select(layer_id,node_id, mod.type) %>%
+  filter(mod.type=="abr")
+
+plas_mods3 <- net.dat2k.ew %>%
+  left_join(., plas_mods2, by=c("node_from"="node_id","layer_from"="layer_id")) %>%
+  rename(mod.from = mod.type) %>%
+  left_join(., plas_mods2, by=c("node_to"="node_id","layer_to"="layer_id")) %>%
+  rename(mod.to = mod.type) %>%
+  mutate(inter.abr=ifelse(mod.from=="abr" & mod.to=="abr", "abr.to.abr", "not abr"))
+
+# Biggest module, intra-module edges
+abr.to.abr <- plas_mods3 %>%
+  filter(inter.abr == "abr.to.abr")
+
+# Biggest module, inter-module edges
+abr.to.not.abr <- plas_mods3 %>%
+  filter(mod.from=="abr" & is.na(mod.to) | is.na(mod.from) & mod.to=="abr")
+
+# Total edges
+tot.abr.edges <- abr.to.abr %>%
+  bind_rows(., abr.to.not.abr)
+
+# To get a list of all plasmids involved in the biggest module:
+abr.plas_mods.from <- plas_mods3 %>%
+  ungroup() %>%
+  select(layer_from, node_from, mod.from) %>%
+  filter(mod.from=="abr") %>%
+  dplyr::rename(mod.lab = mod.from,
+                layer_id = layer_from,
+                node_id = node_from)
+
+abr.plas_mods.to <- plas_mods3 %>%
+  ungroup() %>%
+  select(layer_to, node_to,mod.to) %>%
+  filter(mod.to=="abr") %>%
+  dplyr::rename(mod.lab = mod.to,
+                layer_id= layer_to,
+                node_id = node_to)
+
+abr.mod.plas.list <- abr.plas_mods.from %>%
+  rbind(., abr.plas_mods.to) %>%
+  select(-layer_id) %>%
+  distinct()
+
+abr.mod.plas.list.layers <- abr.plas_mods.from %>%
+  rbind(., abr.plas_mods.to) %>%
+  distinct()
+
+not.abr.plas_mods.from <- plas_mods3 %>%
+  ungroup() %>%
+  select(layer_from, mod.from) %>%
+  filter(is.na(mod.from)) %>%
+  rename(mod.lab = mod.from,
+         layer_id = layer_from) %>%
+  mutate(mod.lab = replace_na(mod.lab, "not abr"))
+
+
+not.abr.plas_mods.to <- plas_mods3 %>%
+  ungroup() %>%
+  select(layer_to, mod.to) %>%
+  filter(is.na(mod.to)) %>%
+  rename(mod.lab = mod.to,
+         layer_id = layer_to) %>%
+  mutate(mod.lab = replace_na(mod.lab, "not abr")) %>%
+  rbind(., not.abr.plas_mods.from) %>%
+  distinct()
+
+only.not.abr <- not.abr.plas_mods.to %>%
+  filter(!(layer_id %in% abr.mod.plas.list.layers$layer_id))
+
+mod.layer.list <- abr.mod.plas.list.layers %>%
+  select(-node_id) %>%
+  rbind(only.not.abr) %>%
+  mutate(layer_id = as.factor(layer_id))
+
+
+# Set up data for visualizations:
+# Labelling edges as part of the largest module or not:
+inter.for.vis2 <- plas_mods3 %>%
+  filter(edge_type=="Inter") %>%
+  ungroup() %>%
+  mutate(l_fr = paste("L",layer_from,sep = "")) %>%
+  mutate(l_to = paste("L",layer_to, sep = "")) %>%
+  rowwise() %>%
+  mutate(uniq_laypair = paste(sort(c(l_fr, l_to)), collapse = "_")) %>%
+  select(-l_fr, -l_to) %>%
+  select(uniq_laypair, everything()) %>%
+  group_by(layer_from, layer_to, uniq_laypair, inter.abr) %>%
+  summarise(weight = n()) %>%
+  mutate(layer_from = as.numeric(layer_from),
+         layer_to = as.numeric(layer_to)) %>%
+  mutate_at(vars(inter.abr), ~replace_na(., "not.abr")) %>%
+  group_by(uniq_laypair, inter.abr) %>%
+  slice(1) %>%
+  distinct() %>%
+  ungroup %>%
+  select(layer_from, layer_to, weight, inter.abr)
+
+# Node list
+inter.list2 <- inter.for.vis2 %>%
+  ungroup() %>%
+  select(layer_from, layer_to) %>%
+  gather() %>%
+  select(value) %>%
+  distinct() %>%
+  rename(layer=value)
+
+# Intra-layer values for visualization:
+intra.for.vis2 <- plas_mods3 %>%
+  filter(edge_type=="Intra") %>%
+  ungroup() %>%
+  group_by(layer_from, layer_to) %>%
+  mutate(intra.edg = n()) %>%
+  rename(layer=layer_from) %>%
+  ungroup() %>%
+  select(layer, intra.edg) %>%
+  bind_rows(.,inter.list2) %>%
+  group_by(layer) %>%
+  arrange(desc(intra.edg)) %>%
+  slice(1) %>%
+  distinct() %>%
+  mutate_at(vars(intra.edg), ~replace_na(., 0)) %>%
+  mutate(layer = as.factor(layer)) %>%
+  left_join(., mod.layer.list, by=c("layer"="layer_id")) %>%
+  left_join(., plas.per.cow, by=c("layer"="layer_id")) %>%
+  distinct()
+####################################################################################################################
+
+
+####################################################################################################################
+# Section 5B: NETWORK VISUALIZATIONS - ABR MODULE
+####################################################################################################################
+# Visualization of the network with interlayer edges and the largest module highlighted
+graph2_abr <- graph_from_data_frame(inter.for.vis2, directed=F, vertices = intra.for.vis2)
+
+set_edge_attr(graph2_abr, "weight", value= inter.for.vis2$weight)
+is.weighted(graph2_abr)
+
+V(graph2_abr)$size <- 12+intra.for.vis2$intra.edg
+V(graph2_abr)$color <- intra.for.vis2$mod.lab
+
+E(graph2_abr)$color <- as.factor(inter.for.vis2$inter.abr)
+V(graph2_abr)$color <- as.factor(intra.for.vis2$mod.lab)
+
+E(graph2_abr)$color <- ifelse(inter.for.vis2$inter.abr == "abr.to.abr", "purple", "gray")
+V(graph2_abr)$color <- ifelse(intra.for.vis2$mod.lab == "abr", "purple", "gray")
+
+# Test plotting
+# Use the same Coords as in the figure for the large module
+
+plot(graph2_abr, edge.width=(E(graph2_abr)$weight*0.1),vertex.label=
+       paste(V(graph2_abr)$name,' (',intra.for.vis2$tot.plas,')',sep=''), 
+     vertex.label.font=2, vertex.label.cex=0.4,
+     vertex.label.color = "black", layout=as.matrix(Coords[,1:2]))
+
+
+# Create Figure 2 Panel B: Full network plot with largest module highlighted:
+png(filename = "abr.mod.highlight.plot.labs.png",res = 900, width = 10, height = 10, units = "in") 
+{
+  plot(graph2_abr, edge.width=(E(graph2_abr)$weight*0.1),vertex.label=
+         paste(V(graph2_abr)$name,' (',intra.for.vis2$tot.plas,')',sep=''), 
+       vertex.label.font=2, vertex.label.cex=0.4,
+       vertex.label.color = "black", layout=as.matrix(Coords[,1:2]))}
+dev.off()
+
+# Save as pdf
+pdf(file = "abr.mod.highlight.plot.pdf", width = 6, height = 6) 
+{
+  plot(graph2_abr, edge.width=(E(graph2_abr)$weight*0.1),vertex.label=
+         paste(V(graph2_abr)$name,' (',intra.for.vis2$tot.plas,')',sep=''), 
+       vertex.label.font=2, vertex.label.cex=0.4,
+       vertex.label.color = "black", layout=as.matrix(Coords[,1:2]))}
+dev.off()
+####################################################################################################################
+
+# Need to recalcualte the edges because now we do not highlight specific edges. The weight is the number of interlayer edges connected to the cow
+inter.for.vis2 <- plas_mods3 %>%
+  filter(edge_type=="Inter") %>%
+  ungroup() %>%
+  mutate(l_fr = paste("L",layer_from,sep = "")) %>%
+  mutate(l_to = paste("L",layer_to, sep = "")) %>%
+  rowwise() %>%
+  mutate(uniq_laypair = paste(sort(c(l_fr, l_to)), collapse = "_")) %>%
+  select(-l_fr, -l_to) %>%
+  select(uniq_laypair, everything()) %>%
+  group_by(layer_from, layer_to, uniq_laypair) %>%
+  summarise(weight = n()) %>%
+  mutate(layer_from = as.numeric(layer_from),
+         layer_to = as.numeric(layer_to))
+
+# Create the graph
+graph_overlap <- graph_from_data_frame(inter.for.vis2, directed=F, vertices = intra.for.vis2)
+set_edge_attr(graph_overlap, "weight", value= inter.for.vis2$weight)
+is.weighted(graph_overlap)
+
+V(graph_overlap)$size <- 12+intra.for.vis2$intra.edg
+E(graph_overlap)$color <- "gray"
+
+# Find the overlapping layers and plot them
+
+# Color map for the module categories
+colmap_V <- 
+  tibble(big=V(graph2)$mod.lab, abr=V(graph2_abr)$mod.lab) %>%
+  mutate(col=case_when(big == 'big' & abr == 'not abr' ~ 'red',
+                       big == 'big' & abr == 'abr' ~ 'orange',
+                       big == 'not big' & abr == 'not abr' ~ 'gray',
+                       big == 'not big' & abr == 'abr' ~ '#FC97FF'))
+V(graph_overlap)$color <- colmap_V$col
+
+# # Layers that have both modules
+# layers_overlap <- V(graph2)$mod.lab=='big' & V(graph2_abr)$mod.lab=='abr'
+# which(layers_overlap==T)
+
+V(graph_overlap)$rel_strength <- round(100*strength(graph_overlap)/sum(strength(graph_overlap)),1)
+
+pdf(file = "overlap.mod.highlight.plot.pdf", width = 6, height = 6) 
+  plot(graph_overlap, edge.width=(E(graph_overlap)$weight*0.1),
+       vertex.label=V(graph_overlap)$rel_strength,
+       vertex.label.font=2, vertex.label.cex=0.6,
+       vertex.label.color = "black", layout=as.matrix(Coords[,1:2]))
+dev.off()
 
 ####################################################################################################################
 # Section 6: LARGEST MODULE CHARACTERISTICS
