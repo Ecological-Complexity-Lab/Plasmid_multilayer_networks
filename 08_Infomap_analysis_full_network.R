@@ -28,10 +28,10 @@ library(igraph)
 # Edgelist with edgeweights created in script 03_Network_setup.R
 load("net.dat2k.ew.Rda")
 
-# Metadata file created in script 03_Network_setup.R
+# Metadata file created in script 01_Initial_data_processing.R
 load("plasmid.metadat.updated.Rda")
 
-# Plasmids per cow file created in in script 03_Network_setup.R
+# Plasmids per cow file created in in script 04_Basic_network_statistics.R
 load("plas.per.cow.Rda")
 ####################################################################################################################
 
@@ -500,7 +500,7 @@ png(filename = "abr.mod.highlight.plot.labs.png",res = 900, width = 10, height =
 {
   plot(graph2_abr, edge.width=(E(graph2_abr)$weight*0.1),vertex.label=
          paste(V(graph2_abr)$name,' (',intra.for.vis2$tot.plas,')',sep=''), 
-       vertex.label.font=2, vertex.label.cex=0.4,
+       vertex.label.font=2, vertex.label.cex=0.7,
        vertex.label.color = "black", layout=as.matrix(Coords[,1:2]))}
 dev.off()
 
@@ -512,6 +512,11 @@ pdf(file = "abr.mod.highlight.plot.pdf", width = 6, height = 6)
        vertex.label.font=2, vertex.label.cex=0.4,
        vertex.label.color = "black", layout=as.matrix(Coords[,1:2]))}
 dev.off()
+####################################################################################################################
+
+
+####################################################################################################################
+# Section 6: NETWORK VISUALIZATIONS - OVERLAPPING ABR AND LARGEST MODULES
 ####################################################################################################################
 
 # Need to recalcualte the edges because now we do not highlight specific edges. The weight is the number of interlayer edges connected to the cow
@@ -556,8 +561,8 @@ V(graph_overlap)$rel_strength <- round(100*strength(graph_overlap)/sum(strength(
 
 pdf(file = "overlap.mod.highlight.plot.pdf", width = 6, height = 6) 
   plot(graph_overlap, edge.width=(E(graph_overlap)$weight*0.1),
-       vertex.label=V(graph_overlap)$rel_strength,
-       vertex.label.font=2, vertex.label.cex=0.6,
+       vertex.label=paste(V(graph2_abr)$name,' (',V(graph_overlap)$rel_strength,')',sep=''), 
+       vertex.label.font=2, vertex.label.cex=0.35,
        vertex.label.color = "black", layout=as.matrix(Coords[,1:2]))
 dev.off()
 
