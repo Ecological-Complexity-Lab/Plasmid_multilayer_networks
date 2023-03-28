@@ -1,6 +1,6 @@
 # General information about code and data
 
-The repository contains data and scripts to carry out all analysis in Shapiro et al., "Multilayer Networks of Plasmid Genetic Similarity Reveal Potential Pathways of Gene Transmission" (in revision, currently in BioRxiv [https://www.biorxiv.org/content/10.1101/2022.09.08.507140v1](https://www.biorxiv.org/content/10.1101/2022.09.08.507140v1)
+The repository contains data and scripts to carry out all analysis in Shapiro et al., "Multilayer Networks of Plasmid Genetic Similarity Reveal Potential Pathways of Gene Transmission" (ISME J 2023, 10.1038/s41396-023-01373-5 [https://rdcu.be/c8AK6](https://rdcu.be/c8AK6))
 
 All scripts tested in R version 4.1.1
 
